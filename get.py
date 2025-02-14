@@ -57,6 +57,6 @@ def fetch_ao3_works(driver, username):
 
 # Example usage
 driver = setup_driver()
-fetch_ao3_works(driver, "INSERT-USER-HERE")  # Replace with your tag
+fetch_ao3_works(driver, "INSERT-USERNAME-HERE")  # Replace with your tag
 
 driver.quit()  # Close browser when done
