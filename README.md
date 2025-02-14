@@ -4,6 +4,7 @@ This Python program uses Selenium to scrape a user's Bookmarks from the fanficti
 
 ## Current Features
 ✅ Uses Selenium to check the Archive's pop-up agreements.
+
 ✅ Extracts the titles of the first five Bookmarks from a user's profile.
 
 ## Planned Features
@@ -12,6 +13,8 @@ This Python program uses Selenium to scrape a user's Bookmarks from the fanficti
 - Collect fic tags (e.g., Angst, Dark).
 - Extract the author's description.
 - Categorize descriptions into useful information.
+
+
 ✅ Long-Term Goals:
 - Collect and store a user's entire Bookmark list.
 - Build a recommendation system based on Bookmark patterns.
@@ -20,5 +23,6 @@ This Python program uses Selenium to scrape a user's Bookmarks from the fanficti
 1. Install dependencies:
 `pip install selenium`
 2. Download ChromeDriver.
-3. Run the script:
+3. Update line 60 with actual username.
+4. Run the script:
 `get.py`
