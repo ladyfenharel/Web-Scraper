@@ -1,39 +1,39 @@
 import sys
 import os
-print("sys.path before:")
-print(sys.path)
 
-# Add this line (modified from before)
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))) # CORRECTED LINE
-print("\nsys.path after adding current dir:")
-print(sys.path)
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 import pytest
 from unittest.mock import patch, MagicMock
 from selenium import webdriver
 from selenium.webdriver.common.by import By
-from get import setup_driver, accept_terms, fetch_ao3_works  # Replace your_module
+from get import (
+    setup_driver,
+    accept_terms,
+    fetch_ao3_works,
+    extract_author,
+    extract_fandom,
+    extract_pairings,
+    extract_tags,
+    extract_characters,
+    extract_ratings,
+    extract_warnings,
+    extract_categories,
+    extract_bookmark_data,
+    get_bookmark_elements,
+)
 
 @pytest.fixture(scope="module")
 def driver():
-    """
-    Fixture to set up and teardown a mock WebDriver instance for testing.
-    Module-scoped to reuse the same driver instance for all tests in this module,
-    improving test speed.
-    """
-    driver_instance = MockDriver()  # Use MockDriver instead of real setup_driver for unit tests
+    driver_instance = MockDriver()
     yield driver_instance
-    # No need to quit a MockDriver
 
 def test_setup_driver():
-    """Unit test to check if setup_driver returns a WebDriver instance."""
     driver_instance = setup_driver()
     assert isinstance(driver_instance, webdriver.Chrome)
-    driver_instance.quit() # Need to quit even if we are also using mock driver for other tests to avoid resource leaks in actual runs
+    driver_instance.quit()
 
 def test_accept_terms_popup_present(driver, capsys):
-    """Unit test for accept_terms when the pop-up is present."""
-    # Mock find_element to simulate pop-up elements being found
     checkbox_mock_1 = MockElement(tag_name='input', attributes={'id': 'tos_agree'})
     checkbox_mock_2 = MockElement(tag_name='input', attributes={'id': 'data_processing_agree'})
     agree_button_mock = MockElement(tag_name='button', attributes={'id': 'accept_tos'})
@@ -42,22 +42,20 @@ def test_accept_terms_popup_present(driver, capsys):
         "tos_agree": checkbox_mock_1,
         "data_processing_agree": checkbox_mock_2,
         "accept_tos": agree_button_mock
-    }[value]): # Use a dictionary to map expected 'value' to mock elements
+    }[value]):
         accept_terms(driver)
     captured = capsys.readouterr()
     assert "Accepted AO3 terms." in captured.out
 
 def test_accept_terms_popup_not_present(driver, capsys):
-    """Unit test for accept_terms when the pop-up is NOT present."""
-    # Mock find_element to raise an exception, simulating no pop-up
-    with patch.object(driver, 'find_element', side_effect=Exception("No element found")):
-        accept_terms(driver)
-    captured = capsys.readouterr()
-    assert "No agreement pop-up found" in captured.out
+    with patch("get.accept_terms", MagicMock()):
+        with patch.object(driver, 'find_element', side_effect=Exception("No element found")):
+            accept_terms(driver)
+        captured = capsys.readouterr()
+        assert "No agreement pop-up found" in captured.out
 
 def test_fetch_ao3_works_bookmarks_found_multiple_titles(driver, capsys):
-    """Unit test for fetch_ao3_works when bookmarks are found, testing multiple titles."""
-    mock_works = [
+    mock_bookmarks = [
         MockElement(tag_name='div', attributes={'class': 'bookmark blurb group'}, children=[
             MockElement(tag_name='h4', attributes={'class': 'heading'}, children=[
                 MockElement(tag_name='a', text='Test Work Title 1')
@@ -68,178 +66,169 @@ def test_fetch_ao3_works_bookmarks_found_multiple_titles(driver, capsys):
                 MockElement(tag_name='a', text='Another Great Work Title')
             ]),
         ]),
-        MockElement(tag_name='div', attributes={'class': 'bookmark blurb group'}, children=[
-            MockElement(tag_name='h4', attributes={'class': 'heading'}, children=[
-                MockElement(tag_name='a', text='Yet One More Title Here')
-            ]),
-        ]),
     ]
-    with patch.object(driver, 'find_elements', return_value=mock_works):
-        fetch_ao3_works(driver, "testuser")
-    captured = capsys.readouterr()
-    assert "Found 3 bookmarks" in captured.out
-    assert "1. Test Work Title 1" in captured.out
-    assert "2. Another Great Work Title" in captured.out
-    assert "3. Yet One More Title Here" in captured.out
-
-def test_fetch_ao3_works_bookmarks_found_less_than_5(driver, capsys):
-    """Unit test for fetch_ao3_works when fewer than 5 bookmarks are found."""
-    mock_works = [
-        MockElement(tag_name='div', attributes={'class': 'bookmark blurb group'}, children=[
-            MockElement(tag_name='h4', attributes={'class': 'heading'}, children=[
-                MockElement(tag_name='a', text='Only One Bookmark')
-            ]),
-        ]),
-    ]
-    with patch.object(driver, 'find_elements', return_value=mock_works):
-        fetch_ao3_works(driver, "testuser")
-    captured = capsys.readouterr()
-    assert "Found 1 bookmarks" in captured.out
-    assert "1. Only One Bookmark" in captured.out
-    assert "2." not in captured.out  # Ensure it doesn't try to print a 2nd title if none exists
+    with patch("get.get_bookmark_elements", return_value=mock_bookmarks):
+        with patch("get.extract_bookmark_data", side_effect=lambda element: {
+            "title": element.find_element(By.TAG_NAME, "a").text,
+            "author": "Test Author",
+            "fandom": "Test Fandom",
+            "pairings": [],
+            "tags": [],
+            "characters": [],
+            "description": "",
+            "ratings": [],
+            "warnings": [],
+            "categories": [],
+        }):
+            bookmarks = fetch_ao3_works(driver, "testuser")
+            assert len(bookmarks) == 2
+            assert bookmarks[0]["title"] == "Test Work Title 1"
+            assert bookmarks[1]["title"] == "Another Great Work Title"
 
 def test_fetch_ao3_works_no_bookmarks_found(driver, capsys):
-    """Unit test for fetch_ao3_works when no bookmarks are found."""
-    with patch.object(driver, 'find_elements', return_value=[]):
-        fetch_ao3_works(driver, "testuser")
-    captured = capsys.readouterr()
-    assert "No bookmarks found." in captured.out
+    with patch("get.accept_terms", MagicMock()):
+        with patch("get.get_bookmark_elements", return_value=[]):
+            fetch_ao3_works(driver, "testuser")
+        captured = capsys.readouterr()
+        assert "No bookmarks found or an error occurred." in captured.out
 
+def test_extract_author(driver):
+    bookmark_element = MockElement(tag_name='div', children=[MockElement(tag_name='a', attributes={'rel': 'author'}, text='Test Author')])
+    assert extract_author(bookmark_element) == 'Test Author'
+
+def test_extract_fandom(driver):
+    bookmark_element = MockElement(tag_name='div', children=[MockElement(tag_name='h5', attributes={'class': 'fandoms heading'}, children=[MockElement(tag_name='a', attributes={'class': 'tag'}, text='Test Fandom')])])
+    assert extract_fandom(bookmark_element) == 'Test Fandom'
+
+def test_extract_pairings(driver):
+    bookmark_element = MockElement(tag_name='div', children=[MockElement(tag_name='ul', attributes={'class': 'tags commas'}, children=[MockElement(tag_name='li', attributes={'class': 'relationships'}, children=[MockElement(tag_name='a', attributes={'class': 'tag'}, text='Test Pairing')])])])
+    assert extract_pairings(bookmark_element) == ['Test Pairing']
+
+def test_extract_tags(driver):
+    bookmark_element = MockElement(tag_name='div', children=[MockElement(tag_name='ul', attributes={'class': 'tags commas'}, children=[MockElement(tag_name='li', attributes={'class': 'freeforms'}, children=[MockElement(tag_name='a', attributes={'class': 'tag'}, text='Test Tag')])])])
+    assert extract_tags(bookmark_element) == ['Test Tag']
+
+def test_extract_characters(driver):
+    bookmark_element = MockElement(tag_name='div', children=[MockElement(tag_name='ul', attributes={'class': 'tags commas'}, children=[MockElement(tag_name='li', attributes={'class': 'characters'}, children=[MockElement(tag_name='a', attributes={'class': 'tag'}, text='Test Character')])])])
+    assert extract_characters(bookmark_element) == ['Test Character']
+
+def test_extract_ratings(driver):
+    bookmark_element = MockElement(tag_name='div', children=[MockElement(tag_name='ul', attributes={'class': 'required-tags'}, children=[MockElement(tag_name='span', attributes={'class': 'rating-explicit', 'title': 'Explicit'})])])
+    assert extract_ratings(bookmark_element) == ['Explicit']
+
+def test_extract_warnings(driver):
+    bookmark_element = MockElement(tag_name='div', children=[MockElement(tag_name='ul', attributes={'class': 'required-tags'}, children=[MockElement(tag_name='span', attributes={'class': 'warning-choosenotto', 'title': 'Choose Not To Use Archive Warnings'})])])
+    assert extract_warnings(bookmark_element) == ['Choose Not To Use Archive Warnings']
+
+def test_extract_categories(driver):
+    bookmark_element = MockElement(tag_name='div', children=[MockElement(tag_name='ul', attributes={'class': 'required-tags'}, children=[MockElement(tag_name='span', attributes={'class': 'category-het', 'title': 'F/M'})])])
+    assert extract_categories(bookmark_element) == ['F/M']
 
 class MockElement:
-    """
-    A simplified mock class to simulate Selenium WebElement behavior for testing purposes.
-    This mock focuses on the functionalities used in the tested code (finding elements,
-    getting text, clicking, getting attributes). It's not a complete WebElement replacement.
-    """
     def __init__(self, tag_name, text='', attributes=None, children=None):
-        """
-        Initializes a MockElement.
-
-        Args:
-            tag_name (str): The tag name of the HTML element (e.g., 'div', 'a', 'button').
-            text (str, optional): The text content of the element. Defaults to ''.
-            attributes (dict, optional): A dictionary of HTML attributes (e.g., {'class': 'heading', 'id': 'tos_agree'}). Defaults to None.
-            children (list of MockElement, optional): A list of child MockElements. Defaults to None.
-        """
         self.tag_name = tag_name
         self.text = text
         self.attributes = attributes or {}
         self.children = children or []
 
     def find_element(self, by, selector):
-        """
-        Mock implementation of find_element.  Simplistically searches children based on selector value.
-        For more complex selectors, this would need to be expanded.
-
-        Args:
-            by (By):  Selenium By class (not actually used in this simplified mock, but kept for API compatibility).
-            selector (str): The selector (e.g., CSS selector, ID).
-
-        Returns:
-            MockElement: The found MockElement if a child matches the selector (based on attribute values).
-        Raises:
-            Exception: if Mock Element not found.
-        """
-        if self.children:
+        if by == By.CSS_SELECTOR:
+            parts = selector.split()
+            current_elements = [self]
+            for part in parts:
+                next_elements = []
+                for current_element in current_elements:
+                    if current_element.children:
+                        for child in current_element.children:
+                            if self._matches_selector_part(child, part):
+                                next_elements.append(child)
+                current_elements = next_elements
+            if current_elements:
+                return current_elements[0]
+            else:
+                raise Exception(f"Mock Element with selector '{selector}' not found in children of '{self.tag_name}'")
+        elif by == By.TAG_NAME:
             for child in self.children:
-                for attr_value in child.attributes.values():
-                    if selector == attr_value: # Basic attribute value matching
-                        return child
-        raise Exception(f"Mock Element with selector '{selector}' not found in children of '{self.tag_name}'")
+                if child.tag_name == selector:
+                    return child
+            raise Exception(f"Mock Element with tag_name '{selector}' not found in children of '{self.tag_name}'")
+        else:
+            if self.children:
+                for child in self.children:
+                    for attr_value in child.attributes.values():
+                        if selector == attr_value:
+                            return child
+            raise Exception(f"Mock Element with selector '{selector}' not found in children of '{self.tag_name}'")
+
+    def _matches_selector_part(self, element, part):
+        if '.' in part:
+            parts = part.split('.')
+            tag_name = parts[0]
+            class_names = parts[1:]
+            if tag_name != '*' and tag_name != element.tag_name:
+                return False
+            for class_name in class_names:
+                if class_name not in element.attributes.get('class', '').split():
+                    return False
+            return True
+        elif '[' in part:
+            tag_name, attribute_part = part.split('[')
+            attribute_name, attribute_value = attribute_part[:-1].split('=')
+            if tag_name != '*' and tag_name != element.tag_name:
+                return False
+            return element.attributes.get(attribute_name) == attribute_value.strip("'")
+        else:
+            return part == element.tag_name or part == '*'
 
     def find_elements(self, by, selector):
-        """
-        Mock implementation of find_elements.  Simplistically searches children based on selector value.
-
-        Args:
-            by (By): Selenium By class (not actually used, for API compatibility).
-            selector (str): The selector.
-
-        Returns:
-            list of MockElement: A list of MockElements whose attributes contain the selector value.
-        """
         found_elements = []
         if self.children:
             for child in self.children:
-                for attr_value in child.attributes.values():
-                    if selector == attr_value: # Basic attribute value matching
-                        found_elements.append(child)
+                if self._matches_selector_part(child, selector):
+                    found_elements.append(child)
         return found_elements
 
     def get_attribute(self, name):
-        """
-        Mock implementation of get_attribute.
-
-        Args:
-            name (str): The attribute name.
-
-        Returns:
-            str or None: The attribute value if found, None otherwise.
-        """
         return self.attributes.get(name)
 
     @property
     def text(self):
-        """Getter for text property."""
         return self._text
 
     @text.setter
     def text(self, value):
-        """Setter for text property."""
         self._text = value
 
     def click(self):
-        """Mock implementation of click."""
         print(f"Mock Element '{self.tag_name}' clicked.")
 
     def send_keys(self, value):
-        """Mock implementation of send_keys."""
         print(f"Mock Element '{self.tag_name}' sending keys: {value}")
 
     def is_displayed(self):
-        """Mock implementation of is_displayed.  Always returns True for simplicity in mocks."""
         return True
 
     @property
     def parent(self):
-        """Mock implementation of parent property. Always returns None for simplicity here."""
         return None
 
-
+    def is_enabled(self):
+        return True
+    
 class MockDriver:
-    """
-    A mock class to simulate the Selenium WebDriver for testing purposes.
-    This mock focuses on the methods used in the tested code (get, find_element, find_elements, execute_script, quit).
-    """
     def __init__(self):
-        """Initializes MockDriver. Keeps track of 'current_url'."""
-        self.current_url = None
-
-    def get(self, url):
-        """Mock implementation of get.  Sets the 'current_url'."""
-        print(f"MockDriver navigating to: {url}")
-        self.current_url = url
+        self.elements = {}
 
     def find_element(self, by, value):
-        """
-        Mock implementation of find_element.  Needs to be patched/mocked in tests to return specific MockElements.
-        This default implementation raises an exception to indicate it needs to be mocked in each test.
-        """
-        raise NotImplementedError("find_element needs to be mocked in test")
+        if value in self.elements:
+            return self.elements[value]
+        raise Exception(f"Mock Driver: No element found for selector '{value}'")
 
-    def find_elements(self, by, selector):
-        """
-        Mock implementation of find_elements. Needs to be patched/mocked in tests to return lists of MockElements.
-        This default implementation returns an empty list.
-        """
-        return [] # Default to no elements found if not mocked in the test
-
-    def execute_script(self, script, element):
-        """Mock implementation of execute_script. Prints the script for verification."""
-        print(f"MockDriver executing script: {script} on element '{element.tag_name}'")
-        element.click() # Simulate click for scripts that click elements
+    def find_elements(self, by, value):
+        return [element for key, element in self.elements.items() if key == value]
 
     def quit(self):
-        """Mock implementation of quit.  Prints a message."""
-        print("MockDriver quit.")
+        print("Mock Driver: Quit called.")
+
+    def get(self, url):
+        print(f"Mock Driver: Navigating to {url}")
