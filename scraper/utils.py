@@ -1,4 +1,5 @@
 from selenium.common.exceptions import NoSuchElementException
+from selenium.webdriver.common.by import By
 
 def extract_element_text(element, selector):
     """Extracts the text content of an element using a CSS selector."""
