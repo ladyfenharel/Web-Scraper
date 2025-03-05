@@ -1,26 +1,81 @@
-# AO3 Bookmarks – Web Scraper
-This Python program uses Selenium to scrape a user's Bookmarks from the fanfiction hub Archive of Our Own (AO3).
+# 📚 AO3 Bookmark Scraper 🔖
 
+This Python script scrapes bookmark data from Archive of Our Own (AO3) for a specified user. It extracts information like work titles, authors, fandoms, pairings, tags, and more.
 
-## Current Features
-✅ Uses Selenium to check the Archive's pop-up agreements.
+## ✨ Features
 
-✅ Extracts the titles of the first five Bookmarks from a user's profile.
+-   Fetches bookmark data from a given AO3 user's page 📖.
+-   Extracts key metadata for each bookmarked work 🔍.
+-   Handles AO3's terms of service agreement popup ✅.
+-   Provides a clean, structured output of bookmark data 📊.
 
-## Planned Features
-✅ Data Collection:
-- Retrieve main pairings (e.g., Harry Potter/Draco Malfoy).
-- Collect fic tags (e.g., Angst, Dark).
-- Extract the author's description.
-- Categorize descriptions into useful information.
+## ⚙️ Prerequisites
 
+-   Python 3.6+
+-   `selenium` library
+-   A compatible web browser (Chrome, Firefox , etc.) and its corresponding WebDriver.
 
-✅ Long-Term Goals:
-- Collect and store a user's entire Bookmark list.
-- Build a recommendation system based on Bookmark patterns.
+## ⬇️ Installation
 
-## Setup and Usage
-1. Install dependencies: `pip install selenium`
-2. Download ChromeDriver.
-3. Run the script: `get.py <username>` with the option `--visible` to show the browser working rather than run headless.
+1.  Clone the repository:
 
+    ```bash
+    git clone [repository URL]
+    cd [repository directory]
+    ```
+
+2.  Install the required Python packages:
+
+    ```bash
+    pip install selenium
+    ```
+
+3.  Download the appropriate WebDriver for your browser and add it to your PATH or specify its location in the script.
+    * Chrome: [ChromeDriver download](https://chromedriver.chromium.org/downloads)
+    * Firefox: [GeckoDriver download](https://github.com/mozilla/geckodriver/releases)
+
+## 🚀 Usage
+
+1.  Run the script:
+
+    ```bash
+    python get.py [AO3 username]
+    ```
+
+    Replace `[AO3 username]` with the username of the AO3 user whose bookmarks you want to scrape.
+    
+2. Add `--visible` to the script if you prefer the WebDriver to not launch headless.
+
+3.  The script will output the scraped bookmark data to the console 🖥️.
+
+## 📝 Example
+
+```bash
+python get.py myAO3username
+```
+
+## 🧪 Testing
+
+To run the unit tests:
+
+```bash
+pytest tests/test_scraper.py
+```
+
+## 📂 Project Structure
+```bash
+📦 AO3-Bookmark-Scraper
+├── 📜 get.py                 # Main script for scraping AO3 bookmarks
+├── 📂 tests
+│   ├── ✅ test_scraper.py    # Unit tests for the scraping functionality
+├── 📖 README.md              # Project documentation
+```
+
+## ⚠️ Notes
+-   **Educational Purposes Only:** This script is provided for educational purposes, demonstrating web scraping techniques.
+-   **Respect for Creative Rights:** The author of this script does not support the use of web scraping for AI training purposes. It is crucial to respect the creative rights of authors and adhere to the terms of service of websites.
+-   Be mindful of AO3's terms of service and robots.txt.
+-   The script may need to be updated if AO3's website structure changes.
+
+## 🤝 Contributing
+Contributions are welcome! Please feel free to submit a pull request.
