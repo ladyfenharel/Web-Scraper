@@ -20,9 +20,7 @@ This Python program uses Selenium to scrape a user's Bookmarks from the fanficti
 - Build a recommendation system based on Bookmark patterns.
 
 ## Setup and Usage
-1. Install dependencies:
-`pip install selenium`
+1. Install dependencies: `pip install selenium`
 2. Download ChromeDriver.
-3. Update line 60 with actual username.
-4. Run the script:
-`get.py`
+3. Run the script: `get.py <username>` with the option `--visible` to show the browser working rather than run headless.
+
