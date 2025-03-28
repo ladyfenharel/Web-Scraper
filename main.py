@@ -1,30 +1,24 @@
 import argparse
-from scrape import setup_driver, fetch_ao3_works
+from scraper.scrape import fetch_ao3_bookmarks
+from database.db import init_db
+import logging
+
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 def main():
-    parser = argparse.ArgumentParser(description="Scrape AO3 bookmarks.")
+    parser = argparse.ArgumentParser(description="Scrape and store AO3 bookmarks.")
     parser.add_argument("username", help="The AO3 username to scrape.")
     parser.add_argument("--visible", action="store_true", help="Run browser in visible mode.")
     args = parser.parse_args()
 
-    driver = setup_driver(not args.visible)
-    bookmarks = fetch_ao3_works(driver, args.username)
-    driver.quit()
-
-    if bookmarks:
-        for bookmark in bookmarks:
-            print(f"Title: {bookmark['title']}")
-            print(f"Author: {bookmark['author']}")
-            print(f"Fandom: {bookmark['fandom']}")
-            print(f"Pairings: {bookmark['pairings']}")
-            print(f"Tags: {bookmark['tags']}")
-            print(f"Description: {bookmark['description']}")
-            print(f"Ratings: {bookmark['ratings']}")
-            print(f"Warnings: {bookmark['warnings']}")
-            print(f"Categories: {bookmark['categories']}")
-            print("-" * 20)
-    else:
-        print("No bookmarks found or an error occurred.")
+    try:
+        init_db()  # Initialize the database
+        logging.info("Database initialized.")
+        fetch_ao3_bookmarks(args.username)  # Scrape and store bookmarks
+        logging.info(f"Bookmarks for {args.username} scraped and stored successfully.")
+    except Exception as e:
+        logging.error(f"An error occurred: {e}")
+        print(f"An error occurred: {e}")
 
 if __name__ == "__main__":
     main()
